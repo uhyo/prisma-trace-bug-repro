@@ -9,6 +9,8 @@ import {
 import { AsyncLocalStorageContextManager } from "@opentelemetry/context-async-hooks";
 import { registerInstrumentations } from "@opentelemetry/instrumentation";
 import { PrismaInstrumentation } from "@prisma/instrumentation";
+import { suppressTracing } from "@opentelemetry/core";
+import { visualizeSpans } from "./visualizeSpans";
 
 context.setGlobalContextManager(new AsyncLocalStorageContextManager().enable());
 
@@ -27,17 +29,24 @@ provider.addSpanProcessor(new SimpleSpanProcessor(exporter));
 provider.register({});
 
 import { PrismaClient } from "@prisma/client";
-import { visualizeSpans } from "./visualizeSpans";
-
-const prisma = new PrismaClient();
 
 const tracer = trace.getTracerProvider().getTracer("default");
 
 async function main() {
-  tracer.startActiveSpan("main", async (span) => {
+  await tracer.startActiveSpan("main-outer", async (span) => {
     try {
-      const count = await prisma.user.count();
-      console.log({ count });
+      await context.with(suppressTracing(context.active()), async () => {
+        await tracer.startActiveSpan("main-inner", async (span) => {
+          try {
+            const prisma = new PrismaClient();
+            const count = await prisma.user.count();
+            console.log({ count });
+            await prisma.$disconnect();
+          } finally {
+            span.end();
+          }
+        });
+      });
     } finally {
       span.end();
     }
@@ -46,12 +55,10 @@ async function main() {
 
 main()
   .then(async () => {
-    await prisma.$disconnect();
     await new Promise((resolve) => setTimeout(resolve, 100));
     visualizeSpans(exporter);
   })
   .catch(async (e) => {
     console.error(e);
-    await prisma.$disconnect();
     process.exit(1);
   });

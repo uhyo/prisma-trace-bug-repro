@@ -1,3 +1,4 @@
+import { INVALID_SPANID } from "@opentelemetry/api";
 import {
   InMemorySpanExporter,
   ReadableSpan,
@@ -16,12 +17,16 @@ export function visualizeSpans(exporter: InMemorySpanExporter): void {
   while (spans.length > 0) {
     for (const span of spans) {
       const { traceId, spanId } = span.spanContext();
+      // console.log({ traceId, spanId, parentSpanId: span.parentSpanId });
       let traceMap = map.get(traceId);
       if (traceMap === undefined) {
         map.set(traceId, (traceMap = new Map()));
       }
 
-      if (span.parentSpanId === undefined) {
+      if (
+        span.parentSpanId === undefined ||
+        span.parentSpanId === INVALID_SPANID
+      ) {
         traceMap.set(spanId, span);
         continue;
       }
@@ -46,7 +51,10 @@ export function visualizeSpans(exporter: InMemorySpanExporter): void {
   for (const [traceId, traceMap] of map) {
     console.log("----- traceId =", traceId, "-----");
     for (const span of traceMap.values()) {
-      if (span.parentSpanId === undefined) {
+      if (
+        span.parentSpanId === undefined ||
+        span.parentSpanId === INVALID_SPANID
+      ) {
         renderSpan(span);
       }
     }
