@@ -11,8 +11,8 @@
   "license": "ISC",
   "devDependencies": {
     "@opentelemetry/api": "^1.4.0",
+    "@opentelemetry/context-async-hooks": "^1.9.1",
     "@opentelemetry/instrumentation": "^0.35.1",
-    "@opentelemetry/sdk-node": "^0.35.1",
     "@opentelemetry/sdk-trace-base": "^1.9.1",
     "@prisma/instrumentation": "^4.10.1",
     "@types/node": "^18.13.0",
