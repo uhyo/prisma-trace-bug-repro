@@ -2,7 +2,6 @@ import { context, trace } from "@opentelemetry/api";
 import {
   AlwaysOnSampler,
   BasicTracerProvider,
-  ConsoleSpanExporter,
   InMemorySpanExporter,
   SimpleSpanProcessor,
 } from "@opentelemetry/sdk-trace-base";
@@ -10,7 +9,7 @@ import { AsyncLocalStorageContextManager } from "@opentelemetry/context-async-ho
 import { registerInstrumentations } from "@opentelemetry/instrumentation";
 import { PrismaInstrumentation } from "@prisma/instrumentation";
 import { suppressTracing } from "@opentelemetry/core";
-import { visualizeSpans } from "./visualizeSpans";
+import { REMOTE_SPAN_ID, visualizeSpans } from "./visualizeSpans";
 
 context.setGlobalContextManager(new AsyncLocalStorageContextManager().enable());
 
@@ -35,6 +34,17 @@ const tracer = trace.getTracerProvider().getTracer("default");
 async function main() {
   await tracer.startActiveSpan("main-outer", async (span) => {
     try {
+      // await context.with(
+      //   trace.setSpan(
+      //     context.active(),
+      //     trace.wrapSpanContext({
+      //       traceId: "10000000000000000000000000000000",
+      //       spanId: REMOTE_SPAN_ID,
+      //       isRemote: true,
+      //       traceFlags: 0,
+      //     })
+      //   ),
+      //   async () => {
       await context.with(suppressTracing(context.active()), async () => {
         await tracer.startActiveSpan("main-inner", async (span) => {
           try {

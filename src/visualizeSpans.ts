@@ -8,11 +8,13 @@ type ReadableSpanTree = ReadableSpan & {
   children?: ReadableSpanTree[];
 };
 
+export const REMOTE_SPAN_ID = "1000000000000000";
+
 export function visualizeSpans(exporter: InMemorySpanExporter): void {
   // traceId -> spanId -> ReadableSpan
   const map = new Map<string, Map<string, ReadableSpanTree>>();
 
-  let spans = exporter.getFinishedSpans();
+  let spans = exporter.getFinishedSpans().concat();
   let next = [];
   while (spans.length > 0) {
     for (const span of spans) {
@@ -25,7 +27,8 @@ export function visualizeSpans(exporter: InMemorySpanExporter): void {
 
       if (
         span.parentSpanId === undefined ||
-        span.parentSpanId === INVALID_SPANID
+        span.parentSpanId === INVALID_SPANID ||
+        span.parentSpanId === REMOTE_SPAN_ID
       ) {
         traceMap.set(spanId, span);
         continue;
@@ -53,7 +56,8 @@ export function visualizeSpans(exporter: InMemorySpanExporter): void {
     for (const span of traceMap.values()) {
       if (
         span.parentSpanId === undefined ||
-        span.parentSpanId === INVALID_SPANID
+        span.parentSpanId === INVALID_SPANID ||
+        span.parentSpanId === REMOTE_SPAN_ID
       ) {
         renderSpan(span);
       }
@@ -61,7 +65,11 @@ export function visualizeSpans(exporter: InMemorySpanExporter): void {
   }
 
   function renderSpan(span: ReadableSpanTree, indent: string = "") {
-    console.log(`${indent}${span.name} (${span.spanContext().spanId})`);
+    console.log(
+      `${indent}${span.name} (${
+        span.spanContext().spanId
+      }) sampled=${!!span.spanContext().traceFlags}`
+    );
     for (const childSpan of span.children ?? []) {
       renderSpan(childSpan, indent + "  ");
     }
